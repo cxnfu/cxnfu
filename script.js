@@ -1,19 +1,107 @@
 // Portfolio Script - Dynamically loads projects from GitHub API
 
+// Theme Management
+(function() {
+    const THEME_KEY = 'cxnfu-theme';
+    const DEFAULT_THEME = 'auto';
+    
+    // Initialize theme on page load
+    function initTheme() {
+        let savedTheme = localStorage.getItem(THEME_KEY);
+        
+        if (!savedTheme) {
+            // Use system preference for first-time visitors
+            savedTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'auto';
+        }
+        
+        applyTheme(savedTheme);
+    }
+    
+    function applyTheme(theme) {
+        const root = document.documentElement;
+        const isDarkMode = theme === 'dark' || (theme === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+        
+        if (isDarkMode) {
+            root.setAttribute('data-theme', 'dark');
+            localStorage.setItem(THEME_KEY, 'dark');
+        } else if (theme === 'auto') {
+            root.removeAttribute('data-theme');
+            localStorage.setItem(THEME_KEY, 'auto');
+        } else {
+            root.setAttribute('data-theme', theme);
+            localStorage.setItem(THEME_KEY, theme);
+        }
+    }
+    
+    // Theme toggle button
+    const themeToggle = document.getElementById('theme-toggle');
+    if (themeToggle) {
+        themeToggle.addEventListener('click', () => {
+            let currentTheme = localStorage.getItem(THEME_KEY) || 'auto';
+            
+            // Cycle through themes: auto -> dark -> light -> auto
+            const themes = ['auto', 'dark', 'light'];
+            const currentIndex = themes.indexOf(currentTheme);
+            const nextTheme = themes[(currentIndex + 1) % themes.length];
+            
+            applyTheme(nextTheme);
+        });
+    }
+    
+    // Listen for system theme changes (when in auto mode)
+    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
+        const currentTheme = localStorage.getItem(THEME_KEY);
+        if (currentTheme === 'auto') {
+            applyTheme(e.matches ? 'dark' : 'light');
+        }
+    });
+    
+    // Initialize on load
+    initTheme();
+})();
+
 document.addEventListener('DOMContentLoaded', () => {
-    loadProjects();
+    // Wait for marked library to be loaded before loading projects
+    waitForMarked().then(() => {
+        loadProjects();
+    });
+    
     setupScrollReveal();
 });
 
+function waitForMarked() {
+    return new Promise((resolve) => {
+        if (typeof marked !== 'undefined') {
+            resolve();
+        } else {
+            // Wait for script to load
+            const checkInterval = setInterval(() => {
+                if (typeof marked !== 'undefined') {
+                    clearInterval(checkInterval);
+                    resolve();
+                }
+            }, 100);
+            
+            // Timeout after 5 seconds - proceed without marked
+            setTimeout(() => {
+                clearInterval(checkInterval);
+                console.warn('Marked library not loaded, using plain text');
+                resolve();
+            }, 5000);
+        }
+    });
+}
+
 async function loadProjects() {
     const grid = document.getElementById('projects-grid');
-    const spinner = grid.querySelector('.loading-spinner');
-
+    
+    if (!grid) return;
+    
     try {
         // Fetch user's repositories from GitHub API
         const response = await fetch('https://api.github.com/users/cxnfu/repos?per_page=100');
         
-        if (!response.ok) throw new Error('Failed to fetch projects');
+        if (!response.ok) throw new Error(`Failed to fetch projects: ${response.status}`);
         
         const repos = await response.json();
         
@@ -30,7 +118,7 @@ async function loadProjects() {
             return;
         }
 
-        // Clear spinner and render projects
+        // Clear grid and render projects
         grid.innerHTML = '';
         
         personalRepos.forEach(repo => {
@@ -38,14 +126,15 @@ async function loadProjects() {
             grid.appendChild(card);
         });
 
+        // Setup parallax for newly created cards
+        setupParallaxForCards();
+
     } catch (error) {
         console.error('Error loading projects:', error);
         grid.innerHTML = `
             <div class="error-message">
                 <p>⚠️ Error loading projects. Try refreshing the page.</p>
             </div>`;
-    } finally {
-        spinner.style.display = 'none';
     }
 }
 
@@ -61,13 +150,11 @@ function createProjectCard(repo) {
         description = escapeHtml(description);
     }
 
-    const languageColor = getLanguageColor(repo.language);
-
     card.innerHTML = `
         <h3 class="project-title">${escapeHtml(repo.name)}</h3>
         <p class="project-description">${description}</p>
         <div class="project-meta">
-            ${repo.language ? `<span class="project-language" style="color: ${languageColor}">${repo.language}</span>` : ''}
+            ${repo.language ? `<span class="project-language">${repo.language}</span>` : ''}
             <span class="project-stars">⭐ ${repo.stargazers_count || 0}</span>
         </div>
     `;
@@ -86,21 +173,24 @@ function escapeHtml(text) {
     return div.innerHTML;
 }
 
-function getLanguageColor(lang) {
-    const colors = {
-        'JavaScript': '#f7df1e',
-        'TypeScript': '#3178c6',
-        'Python': '#3572A5',
-        'Rust': '#dea584',
-        'Go': '#00add8',
-        'C++': '#f34b7d',
-        'CSS': '#563d7c',
-        'HTML': '#e34c26',
-        'Dart': '#00b4ab',
-        'Swift': '#ffac40',
-        'Kotlin': '#7f52ff'
-    };
-    return colors[lang] || '#a1a1aa';
+function setupParallaxForCards() {
+    // Now query for cards that exist
+    const projectCards = document.querySelectorAll('#projects-grid .project-card');
+    
+    window.addEventListener('scroll', () => {
+        const scrolled = window.scrollY;
+        
+        projectCards.forEach((card) => {
+            if (scrolled < 1200 && card.classList.contains('reveal')) {
+                const cardTop = card.getBoundingClientRect().top + scrolled;
+                if (cardTop > 600 && cardTop < 1400) {
+                    card.style.transform = `translateY(${(cardTop - 800) * 0.2}px)`;
+                } else {
+                    card.style.transform = 'none';
+                }
+            }
+        });
+    });
 }
 
 function setupScrollReveal() {
@@ -121,12 +211,18 @@ function setupScrollReveal() {
 window.addEventListener('scroll', () => {
     const scrollTop = window.scrollY;
     const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+    
+    if (docHeight <= 0) return;
+    
     const scrollPercent = (scrollTop / docHeight) * 100;
     
-    const progressBar = document.querySelector('.scroll-progress');
-    if (progressBar) {
-        progressBar.style.width = `${scrollPercent}%`;
+    let progressBar = document.querySelector('.scroll-progress');
+    if (!progressBar) {
+        progressBar = document.createElement('div');
+        progressBar.className = 'scroll-progress';
+        document.body.appendChild(progressBar);
     }
+    progressBar.style.width = `${scrollPercent}%`;
 });
 
 // Smooth scroll for navigation links
@@ -144,36 +240,13 @@ document.querySelectorAll('a[href^="#"]').forEach(anchor => {
     });
 });
 
-// Add scroll reveal to project cards after load
-document.addEventListener('DOMContentLoaded', () => {
-    const projectCards = document.querySelectorAll('#projects-grid .project-card');
-    projectCards.forEach(card => card.classList.add('reveal'));
-});
-
 // Parallax effect on hero text
 window.addEventListener('scroll', () => {
     const scrolled = window.scrollY;
     const heroTitle = document.querySelector('.hero h1');
     
-    if (scrolled < 800) {
+    if (scrolled < 800 && heroTitle) {
         heroTitle.style.transform = `translateY(${scrolled * 0.3}px)`;
-        heroTitle.style.opacity = 1 - (scrolled / 800);
+        heroTitle.style.opacity = Math.max(0, 1 - (scrolled / 800));
     }
-});
-
-// Subtle parallax for project cards
-const projectCards = document.querySelectorAll('#projects-grid .project-card');
-window.addEventListener('scroll', () => {
-    const scrolled = window.scrollY;
-    
-    projectCards.forEach((card, index) => {
-        if (scrolled < 1200 && card.classList.contains('reveal')) {
-            const cardTop = card.getBoundingClientRect().top + scrolled;
-            if (cardTop > 600 && cardTop < 1400) {
-                card.style.transform = `translateY(${(cardTop - 800) * 0.2}px)`;
-            } else {
-                card.style.transform = 'none';
-            }
-        }
-    });
 });
