@@ -1,5 +1,65 @@
 // Portfolio Script - Dynamically loads projects from GitHub API
 
+// Theme Management
+(function() {
+    const THEME_KEY = 'cxnfu-theme';
+    const DEFAULT_THEME = 'auto';
+    
+    // Initialize theme on page load
+    function initTheme() {
+        let savedTheme = localStorage.getItem(THEME_KEY);
+        
+        if (!savedTheme) {
+            // Use system preference for first-time visitors
+            savedTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'auto';
+        }
+        
+        applyTheme(savedTheme);
+    }
+    
+    function applyTheme(theme) {
+        const root = document.documentElement;
+        const isDarkMode = theme === 'dark' || (theme === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+        
+        if (isDarkMode) {
+            root.setAttribute('data-theme', 'dark');
+            localStorage.setItem(THEME_KEY, 'dark');
+        } else if (theme === 'auto') {
+            root.removeAttribute('data-theme');
+            localStorage.setItem(THEME_KEY, 'auto');
+        } else {
+            root.setAttribute('data-theme', theme);
+            localStorage.setItem(THEME_KEY, theme);
+        }
+    }
+    
+    // Theme toggle button
+    const themeToggle = document.getElementById('theme-toggle');
+    if (themeToggle) {
+        themeToggle.addEventListener('click', () => {
+            let currentTheme = localStorage.getItem(THEME_KEY) || 'auto';
+            
+            // Cycle through themes: auto -> dark -> light -> auto
+            const themes = ['auto', 'dark', 'light'];
+            const currentIndex = themes.indexOf(currentTheme);
+            const nextTheme = themes[(currentIndex + 1) % themes.length];
+            
+            applyTheme(nextTheme);
+        });
+    }
+    
+    // Listen for system theme changes (when in auto mode)
+    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
+        const currentTheme = localStorage.getItem(THEME_KEY);
+        if (currentTheme === 'auto') {
+            applyTheme(e.matches ? 'dark' : 'light');
+        }
+    });
+    
+    // Initialize on load
+    initTheme();
+})();
+
 document.addEventListener('DOMContentLoaded', () => {
     // Wait for marked library to be loaded before loading projects
     waitForMarked().then(() => {
