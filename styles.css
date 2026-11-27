@@ -17,12 +17,12 @@
 
 /* Dark Theme */
 [data-theme="dark"] {
-    --bg-primary: #0a0a14;
-    --bg-secondary: #12121f;
-    --accent: #6366f1;
-    --text-primary: #e5e7eb;
-    --text-secondary: #9ca3af;
-    --border-color: rgba(255, 255, 255, 0.1);
+    --bg-primary: #ffffff;
+    --bg-secondary: #f5f5f7;
+    --accent: #2563eb;
+    --text-primary: #18181b;
+    --text-secondary: #71717a;
+    --border-color: rgba(14, 18, 22, 0.08);
 }
 
 /* Auto Theme - uses system preference */
@@ -36,12 +36,12 @@
 }
 
 [data-theme="auto"].dark {
-    --bg-primary: #0a0a14;
-    --bg-secondary: #12121f;
-    --accent: #6366f1;
-    --text-primary: #e5e7eb;
-    --text-secondary: #9ca3af;
-    --border-color: rgba(255, 255, 255, 0.1);
+    --bg-primary: #ffffff;
+    --bg-secondary: #f5f5f7;
+    --accent: #2563eb;
+    --text-primary: #18181b;
+    --text-secondary: #71717a;
+    --border-color: rgba(14, 18, 22, 0.08);
 }
 
 /* Transition for smooth theme switching */
@@ -492,20 +492,6 @@ body {
 .reveal.active {
     opacity: 1;
     transform: translateY(0);
-}
-
-/* Cursor Effect (subtle) */
-body::after {
-    content: '';
-    position: fixed;
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    background: radial-gradient(circle, rgba(37, 99, 235, 0.1) 0%, transparent 70%);
-    pointer-events: none;
-    z-index: 9999;
-    transform: translate(-50%, -50%);
-    transition: opacity 0.3s ease;
 }
 
 /* Focus states for accessibility */
