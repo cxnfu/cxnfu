@@ -25,7 +25,7 @@ async function loadProjects() {
         if (personalRepos.length === 0) {
             grid.innerHTML = `
                 <div class="no-projects">
-                    <p>No se encontraron proyectos personales. ¡Agrega algo genial!</p>
+                    <p>No projects found yet. Build something amazing!</p>
                 </div>`;
             return;
         }
@@ -42,7 +42,7 @@ async function loadProjects() {
         console.error('Error loading projects:', error);
         grid.innerHTML = `
             <div class="error-message">
-                <p>⚠️ Error al cargar proyectos. Intenta recargar la página.</p>
+                <p>⚠️ Error loading projects. Try refreshing the page.</p>
             </div>`;
     } finally {
         spinner.style.display = 'none';
@@ -148,4 +148,32 @@ document.querySelectorAll('a[href^="#"]').forEach(anchor => {
 document.addEventListener('DOMContentLoaded', () => {
     const projectCards = document.querySelectorAll('#projects-grid .project-card');
     projectCards.forEach(card => card.classList.add('reveal'));
+});
+
+// Parallax effect on hero text
+window.addEventListener('scroll', () => {
+    const scrolled = window.scrollY;
+    const heroTitle = document.querySelector('.hero h1');
+    
+    if (scrolled < 800) {
+        heroTitle.style.transform = `translateY(${scrolled * 0.3}px)`;
+        heroTitle.style.opacity = 1 - (scrolled / 800);
+    }
+});
+
+// Subtle parallax for project cards
+const projectCards = document.querySelectorAll('#projects-grid .project-card');
+window.addEventListener('scroll', () => {
+    const scrolled = window.scrollY;
+    
+    projectCards.forEach((card, index) => {
+        if (scrolled < 1200 && card.classList.contains('reveal')) {
+            const cardTop = card.getBoundingClientRect().top + scrolled;
+            if (cardTop > 600 && cardTop < 1400) {
+                card.style.transform = `translateY(${(cardTop - 800) * 0.2}px)`;
+            } else {
+                card.style.transform = 'none';
+            }
+        }
+    });
 });
